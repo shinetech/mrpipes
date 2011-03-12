@@ -1,0 +1,94 @@
+#!/usr/bin/env node
+
+var http = require("http");
+var config = require("../config");
+var route = config.route;
+
+function info(name, host, port, message) {
+    console.log(name + " [" + host + ":" + port + "] " + message);
+}
+
+function BackendHandler_onBackendData(data) {
+    this.resp.write(data);
+}
+
+function BackendHandler_onBackendEnd() {
+    info(this.backend, this.host, this.port, "backend response complete");
+    this.resp.end();
+}
+
+function BackendHandler_onBackendResponse(resp) {
+    info(this.backend, this.host, this.port, "backend response begins");
+    resp.on("data", this.onBackendData);
+    resp.on("end", this.onBackendEnd);
+    this.resp.writeHead(resp.statusCode, resp.headers);
+}
+
+function BackendHandler_onBackendSocketError(exception) {
+    info(this.backend, this.host, this.port, exception);
+    this.resp.writeHead(503, {"content-type": "text/html"});
+    this.resp.end();
+}
+
+function BackendHandler(backend, host, port, req, resp) {
+    this.backend = backend;
+    this.host = host;
+    this.port = port;
+    this.req = req;
+    this.resp = resp;
+
+    this.onBackendData = BackendHandler_onBackendData.bind(this);
+    this.onBackendEnd = BackendHandler_onBackendEnd.bind(this);
+    this.onBackendResponse = BackendHandler_onBackendResponse.bind(this);
+    this.onBackendSocketError = BackendHandler_onBackendSocketError.bind(this);
+}
+
+var server = http.createServer(function(req, resp) {
+    var request = {
+        url: req.url,
+        headers: req.headers,
+        method: req.method,
+        backend: config.defaultBackend
+    };
+
+    route(request);
+
+    var name = request.backend;
+    var backend = config.backends[name];
+    if (!backend) {
+        resp.writeHead(500, {"content-type": "text/html"});
+        resp.end();
+    }
+    else {
+        var host = backend[0];
+        var port = backend[1];
+        var handler = new BackendHandler(name, host, port, req, resp);
+        var backendReq = http.request({
+            host: host,
+            port: port,
+            path: request.url,
+            method: request.method,
+            headers: request.headers
+        }, handler.onBackendResponse);
+        backendReq.on("error", handler.onBackendSocketError);
+        req.on("data", backendReq.write.bind(backendReq));
+        req.on("end", function() {
+            backendReq.end();
+            var message = "backend request to " + request.url + " complete";
+            info(name, host, port, message);
+        });
+        req.socket.on("error", function() {
+            info(name, host, port, "client hung up");
+        });
+        req.socket.on("close", function() {
+            info(name, host, port, "client disconnected");
+            backendReq.abort();
+        });
+        backendReq.end();
+        var message = "backend request to " + request.url + " begins";
+        info(name, host, port, message);
+    }
+});
+server.listen(config.port, config.host);
+console.log("[" + config.host + ":" + config.port + "] server started");
+

@@ -1,4 +1,4 @@
-var route = require("./routes");
+var route = require("./route");
 
 exports.host = "0.0.0.0";
 exports.port = 9909;

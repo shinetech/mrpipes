@@ -2,6 +2,8 @@ var route = require("./route");
 
 exports.host = "0.0.0.0";
 exports.port = 9909;
+exports.user = "mrpipes";
+exports.group = "mrpipes";
 exports.backends = {
     apache:      ["localhost", 80],
     eventserver: ["localhost", 4322]

@@ -89,6 +89,19 @@ var server = http.createServer(function(req, resp) {
         info(name, host, port, message);
     }
 });
-server.listen(config.port, config.host);
+server.listen(config.port, config.host, function() {
+    if (process.getuid() == 0) {
+        if (config.group) {
+            var message = "setting gid=" + config.group;
+            info("security", config.host, config.port, message);
+            process.setgid(config.group);
+        }
+        if (config.user) {
+            var message = "setting uid=" + config.user;
+            info("security", config.host, config.port, message);
+            process.setuid(config.user);
+        }
+    }
+});
 console.log("[" + config.host + ":" + config.port + "] server started");
 

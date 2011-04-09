@@ -60,10 +60,11 @@ var server = http.createServer(function(req, resp) {
         resp.end();
     }
     else {
-        var host = backend[0];
-        var port = backend[1];
+        var host = backend.host;
+        var port = backend.port;
+        var secure = backend.secure;
         var handler = new BackendHandler(name, host, port, req, resp);
-        var backendReq = http.request({
+        var backendReq = (secure ? https : http).request({
             host: host,
             port: port,
             path: request.url,

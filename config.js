@@ -5,8 +5,16 @@ exports.port = 9909;
 exports.user = "mrpipes";
 exports.group = "mrpipes";
 exports.backends = {
-    apache:      ["localhost", 80],
-    eventserver: ["localhost", 4322]
+    apache: {
+        host:   "localhost",
+        port:   80,
+        secure: false
+    },
+    eventserver: {
+        host:   "localhost",
+        port:   4322,
+        secure: false
+    }
 };
 exports.defaultBackend = "apache";
 exports.route = route;
